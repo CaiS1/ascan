@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -106,17 +106,14 @@ func main() {
 			}else {
 				urls <- domain
 			}
-
 		}
 		close(urls)
 		if err := sc.Err();err != nil{
 			fmt.Fprintf(os.Stderr, "failed to read input: %s\n", err)
 		}
-
-
 	}
 	wg.Wait()
-	fmt.Println("done")
+	fmt.Println("over")
 
 }
 func is(client *http.Client, urls string) bool {
@@ -129,10 +126,10 @@ func is(client *http.Client, urls string) bool {
 
 	resp, err := client.Do(req)
 
-	if resp != nil {
+	if resp != nil || resp.StatusCode != 200{
 
-		if(scan(resp)){
-			fmt.Println(urls+"   疑似存在未授权访问接口"+"   method=GET")
+		if(scan(resp,urls,"GET")){
+			return true
 		}
 		defer resp.Body.Close()
 	}else {
@@ -146,8 +143,8 @@ func is(client *http.Client, urls string) bool {
 
 		reqpostp,err := client.Do(reqpost)
 		if reqpostp != nil{
-			if(scan(reqpostp)){
-				fmt.Println(urls+"   疑似存在未授权访问接口"+"   method=POST")
+			if(scan(reqpostp,urls,"POST")){
+				return true
 			}
 		}
 		if err!= nil{
@@ -160,13 +157,42 @@ func is(client *http.Client, urls string) bool {
 
 	return true
 }
-func scan(resp *http.Response)  bool{
+func Gettype(str string) string {
+	if strings.Contains(str,"json"){
+		return "json"
+	}else if(strings.Contains(str,"text/plain")){
+		return "text"
+	}else if(strings.Contains(str,"text/html")){
+		return "html"
+	}else if(strings.Contains(str,"application/javascript")){
+		return "javascript"
+	}else{
+		return "unkonw"
+	}
+}
+func findtitle(str string) string {
+	matcheds := regexp.MustCompile("<title>[\\s\\S]*?</title>")
+	s := matcheds.FindString(str)
+	return s
+
+}
+func scan(resp *http.Response,url string,method string)  bool{
 	if resp.StatusCode == 200{
 		body,_ := ioutil.ReadAll(resp.Body)
 		str := string(body)
-		if(str[0] == '{' && str[len(str) - 1] == '}'){
-			return true
+		Type := resp.Header.Get("Content-Type")
+		Type = Gettype(Type)
+		switch Type{
+		case "html":
+			title := findtitle(str)
+			fmt.Println(url+" "+method+" "+resp.Status+" "+"HTML"+" "+title)
+		default:
+			fmt.Println(url+" "+method+" "+resp.Status+" "+Type+" "+ str[:50])
 		}
+		return true
+	}else {
+		fmt.Println(url+" "+resp.Status)
+		return false
 	}
 	return false
 }
