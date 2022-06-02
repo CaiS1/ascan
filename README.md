@@ -5,7 +5,7 @@ Ascan 可以轻松帮你解决API接口众多时的烦恼
 ## Install
 
 ```
-▶ go intsall github.com/0zard/ascan@latest
+▶ go install github.com/0zard/ascan@latest
 ```
 
 ## Basic Usage
