@@ -98,7 +98,7 @@ func main() {
 		sc := bufio.NewScanner(os.Stdin)
 		for sc.Scan() {
 			domain := strings.ToLower(sc.Text())
-
+			
 			// and http://
 			if !strings.Contains(domain, "http") {
 				urls <- "https://" + domain
@@ -117,6 +117,7 @@ func main() {
 
 }
 func is(client *http.Client, urls string) bool {
+	//GET
 	req, err := http.NewRequest("GET", urls, nil)
 	if err != nil {
 		return false
@@ -132,26 +133,24 @@ func is(client *http.Client, urls string) bool {
 			return true
 		}
 		defer resp.Body.Close()
-	}else {
-		reqpost, errp := http.NewRequest("POST",urls,nil)
-		if errp != nil{
-			return false
-		}
+	}
 
-		reqpost.Header.Add("Connection", "close")
-		reqpost.Close = true
+	//POST
+	reqpost, errp := http.NewRequest("POST",urls,nil)
+	if errp != nil{
+		return false
+	}
 
-		reqpostp,err := client.Do(reqpost)
-		if reqpostp != nil{
-			if(scan(reqpostp,urls,"POST")){
-				return true
-			}
-		}
-		if err!= nil{
-			return false
+	reqpost.Header.Add("Connection", "close")
+	reqpost.Close = true
+
+	reqpostp,err := client.Do(reqpost)
+	if reqpostp != nil{
+		if(scan(reqpostp,urls,"POST")){
+			return true
 		}
 	}
-	if err != nil {
+	if err!= nil{
 		return false
 	}
 
@@ -187,7 +186,12 @@ func scan(resp *http.Response,url string,method string)  bool{
 			title := findtitle(str)
 			fmt.Println(url+" "+method+" "+resp.Status+" "+"HTML"+" "+title)
 		default:
-			fmt.Println(url+" "+method+" "+resp.Status+" "+Type+" "+ str[:50])
+			if len(str) > 50{
+				fmt.Println(url+" "+method+" "+resp.Status+" "+Type+" "+ str[0:50])
+			}else {
+				fmt.Println(url+" "+method+" "+resp.Status+" "+Type+" "+ str)
+			}
+
 		}
 		return true
 	}else {
